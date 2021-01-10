@@ -26,6 +26,7 @@ int main(void) {
 
     /* Initialize peripherals */
     display_init( res, bit, 2, GAMMA_NONE, ANTIALIAS_RESAMPLE );
+    controller_init();
     console_init();
     console_set_render_mode(RENDER_MANUAL);
 
@@ -37,10 +38,11 @@ int main(void) {
     }
 
     const char* rom = rom_menu();
-    printf("Hello world!\nGonna load %s\n", rom);
+    printf("Loading %s\n", rom);
     console_render();
 
     gba_init(rom);
+    console_close();
     gba_system_loop();
 
     return 0;

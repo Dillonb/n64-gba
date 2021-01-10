@@ -62,9 +62,12 @@ void gba_system_loop() {
 void gba_init(const char* rom) {
     memset(&mem, 0, sizeof(mem));
     memset(&bus, 0, sizeof(bus));
+    memset(&ppu, 0, sizeof(ppu));
 
     mem.rom = dfs_open(rom);
     mem.rom_size = dfs_size(mem.rom);
+
+    bus.KEYINPUT.raw = 0x03FF;
 
     // Initialize the CPU, hook it up to the GBA bus
     cpu = init_arm7tdmi(gba_read_byte,
@@ -74,4 +77,5 @@ void gba_init(const char* rom) {
                         gba_write_half,
                         gba_write_word);
     skip_bios(cpu);
+    ACQUIRE_DISPLAY();
 }

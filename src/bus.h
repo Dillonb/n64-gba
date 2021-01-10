@@ -11,4 +11,6 @@ void gba_write_byte(word address, byte value, access_type_t access_type);
 void gba_write_half(word address, half value, access_type_t access_type);
 void gba_write_word(word address, word value, access_type_t access_type);
 
+void handle_input();
+
 #endif //N64_GBA_BUS_H

@@ -1,5 +1,7 @@
 #include "bus.h"
 
+#include <libdragon.h>
+
 #include "gba.h"
 #include "ioreg_util.h"
 #include "ioreg_names.h"
@@ -744,5 +746,20 @@ void gba_write_word(word address, word value, access_type_t access_type) {
         case REGION_SRAM_MIRR:
             logfatal("gba_write_word REGION_SRAM_MIRR 0x%08lX", address);
     }
+}
 
+void handle_input() {
+    controller_scan();
+    struct controller_data keys = get_keys_pressed();
+
+    bus.KEYINPUT.a =      !keys.c[0].A;
+    bus.KEYINPUT.b =      !keys.c[0].B;
+    bus.KEYINPUT.select = !keys.c[0].C_down;
+    bus.KEYINPUT.start =  !keys.c[0].start;
+    bus.KEYINPUT.right =  !keys.c[0].right;
+    bus.KEYINPUT.left =   !keys.c[0].left;
+    bus.KEYINPUT.up =     !keys.c[0].up;
+    bus.KEYINPUT.down =   !keys.c[0].down;
+    bus.KEYINPUT.r =      !keys.c[0].R;
+    bus.KEYINPUT.l =      !keys.c[0].L;
 }

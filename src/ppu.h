@@ -3,6 +3,8 @@
 
 #include "util.h"
 
+#include <libdragon.h>
+
 #define PRAM_SIZE  0x400
 #define VRAM_SIZE  0x18000
 #define OAM_SIZE   0x400
@@ -89,12 +91,16 @@ typedef struct ppu {
     DISPCNT_t DISPCNT;
     DISPSTAT_t DISPSTAT;
 
+    display_context_t display;
+
     byte pram[PRAM_SIZE];
     byte vram[VRAM_SIZE];
     byte oam[OAM_SIZE];
 } ppu_t;
 
 extern ppu_t ppu;
+
+#define ACQUIRE_DISPLAY() do { while (!(ppu.display = display_lock())) {} } while(0)
 
 void ppu_hblank();
 void ppu_vblank();
