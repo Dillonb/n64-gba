@@ -3,10 +3,14 @@ N64-GBA
 
 An embarrassingly slow GBA emulator for the N64 that only runs ARMWrestler
 
-
 Why?
 ----
 Why not?
+
+
+Download
+--------
+Check Releases on GitHub.
 
 Features
 --------
@@ -22,3 +26,8 @@ Missing
 - DMA
 - Sprites
 - Usefulness
+
+Building
+--------
+- Install libdragon (tested with the version from the AUR)
+- Build with CMake
