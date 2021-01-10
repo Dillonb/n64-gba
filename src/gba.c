@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include "bus.h"
+#include "ppu.h"
 
 gbamem_t mem;
 gbabus_t bus;
@@ -43,18 +44,18 @@ void gba_system_loop() {
     while (!should_quit) {
         for (int line = 0; line < VISIBLE_LINES; line++) {
             extra = run_system(VISIBLE_CYCLES + extra);
-            //ppu_hblank(ppu);
+            ppu_hblank();
             extra = run_system(HBLANK_CYCLES + extra);
-            //ppu_end_hblank(ppu);
+            ppu_end_hblank();
         }
-        //ppu_vblank(ppu);
+        ppu_vblank(ppu);
         for (int line = 0; line < VBLANK_LINES; line++) {
             extra = run_system(VISIBLE_CYCLES + extra);
-            //ppu_hblank(ppu);
+            ppu_hblank();
             extra = run_system(HBLANK_CYCLES + extra);
-            //ppu_end_hblank(ppu);
+            ppu_end_hblank();
         }
-        //ppu_end_vblank(ppu);
+        ppu_end_vblank();
     }
 }
 

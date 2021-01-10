@@ -23,7 +23,7 @@ set(CMAKE_C_LINK_EXECUTABLE   "${CMAKE_C_LINKER} -o <TARGET> <OBJECTS> <CMAKE_C_
 add_subdirectory(src/arm7tdmi)
 
 # Build and link main code to ELF format
-add_executable(code.elf src/main.c src/gba.c src/gba.h src/util.h src/log.h src/bus.c src/bus.h src/ioreg_util.h src/ioreg_names.h)
+add_executable(code.elf src/main.c src/gba.c src/gba.h src/util.h src/log.h src/bus.c src/bus.h src/ioreg_util.h src/ioreg_names.h src/ppu.c src/ppu.h)
 target_compile_options(code.elf PUBLIC -Wall -Werror -O2)
 target_link_libraries(code.elf PUBLIC dragon c m dragonsys arm7tdmi)
 

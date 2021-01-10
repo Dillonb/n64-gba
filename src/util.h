@@ -20,6 +20,7 @@ typedef int32_t i32;
 typedef int64_t i64;
 
 #define INLINE static inline __attribute__((always_inline))
+#define PACKED __attribute__((__packed__))
 
 INLINE int popcnt_16(u16 value) {
     int count = 0;
@@ -60,12 +61,25 @@ INLINE void word_to_byte_array(byte* arr, word index, word value) {
     memcpy(arr + index, &w, sizeof(word));
 }
 
+INLINE void half_to_byte_array(byte* arr, word index, half value) {
+    half h = bswap16(value);
+    memcpy(arr + index, &h, sizeof(half));
+}
+
 INLINE word word_from_byte_array(byte* arr, word index) {
     word val;
     memcpy(&val, arr + index, sizeof(word));
     return bswap32(val);
 }
 
+INLINE half half_from_byte_array(byte* arr, word index) {
+    half val;
+    memcpy(&val, arr + index, sizeof(half));
+    return bswap16(val);
+}
+
 #define ASSERTWORD(thing) _Static_assert(sizeof(thing) == 4);
+#define ASSERTHALF(thing) _Static_assert(sizeof(thing) == 2);
+#define ASSERTBYTE(thing) _Static_assert(sizeof(thing) == 1);
 
 #endif //N64_GBA_UTIL_H

@@ -3,6 +3,7 @@
 #include "gba.h"
 #include "ioreg_util.h"
 #include "ioreg_names.h"
+#include "ppu.h"
 
 #define REGION_BIOS       0x00
 #define REGION_EWRAM      0x02
@@ -20,11 +21,21 @@
 #define REGION_SRAM       0x0E
 #define REGION_SRAM_MIRR  0x0F
 
+INLINE byte read_byte_ioreg(word addr) {
+    switch (addr & 0xFFF) {
+        case IO_POSTFLG:
+            logwarn("Ignoring read from POSTFLG reg. Returning 0")
+            return 0;
+        default:
+            logfatal("Reading byte ioreg at 0x%08lX", addr)
+    }
+}
+
 INLINE half* get_half_ioreg_ptr(word addr, bool write) {
     word regnum = addr & 0xFFF;
     switch (regnum) {
-        case IO_DISPCNT: logfatal("return &ppu->DISPCNT.raw;")
-        case IO_DISPSTAT: logfatal("return &ppu->DISPSTAT.raw;")
+        case IO_DISPCNT: return &ppu.DISPCNT.raw;
+        case IO_DISPSTAT: return &ppu.DISPSTAT.raw;
         case IO_BG0CNT: logfatal("return &ppu->BG0CNT.raw;")
         case IO_BG1CNT: logfatal("return &ppu->BG1CNT.raw;")
         case IO_BG2CNT: logfatal("return &ppu->BG2CNT.raw;")
@@ -174,6 +185,35 @@ INLINE word* get_word_ioreg_ptr(word addr) {
         default: logfatal("Tried to get the address of an unknown (but valid) word ioreg addr: 0x%08lX", addr)
     }
 }
+
+INLINE word read_word_ioreg(word addr) {
+    if (!is_ioreg_readable(addr)) {
+        logwarn("Returning 0 (UNREADABLE BUT VALID WORD IOREG 0x%08lX)", addr)
+        return 0;
+    }
+    word* ioreg = get_word_ioreg_ptr(addr);
+    if (ioreg) {
+        return *ioreg;
+    } else {
+        logwarn("Ignoring read from word ioreg at 0x%08lX and returning 0.", addr)
+        return 0;
+    }
+}
+
+INLINE half read_half_ioreg(word addr) {
+    if (!is_ioreg_readable(addr)) {
+        logwarn("Returning 0 (UNREADABLE BUT VALID HALF IOREG 0x%08lX)", addr)
+        return 0;
+    }
+    half* ioreg = get_half_ioreg_ptr(addr, false);
+    if (ioreg) {
+        return *ioreg;
+    } else {
+        logwarn("Ignoring read from half ioreg at 0x%08lX and returning 0.", addr)
+        return 0;
+    }
+}
+
 
 INLINE void write_word_ioreg_masked(word addr, word value, word mask) {
     word maskedaddr = addr & 0xFFF;
@@ -372,7 +412,48 @@ INLINE void write_byte_ioreg(word addr, byte value) {
 }
 
 byte gba_read_byte(word address, access_type_t access_type) {
-    logfatal("gba_read_byte 0x%08lX", address);
+    half region = address >> 24;
+    switch (region) {
+        case REGION_BIOS:
+            logfatal("gba_read_byte REGION_BIOS 0x%08lX", address);
+        case REGION_EWRAM: {
+            word index = (address - 0x02000000) % 0x40000;
+            return mem.ewram[index];
+        }
+        case REGION_IWRAM: {
+            word index = (address - 0x03000000) % 0x8000;
+            return mem.iwram[index];
+        }
+        case REGION_IOREG:
+            logfatal("gba_read_byte REGION_IOREG 0x%08lX", address);
+        case REGION_PRAM:
+            logfatal("gba_read_byte REGION_PRAM 0x%08lX", address);
+        case REGION_VRAM:
+            logfatal("gba_read_byte REGION_VRAM 0x%08lX", address);
+        case REGION_OAM:
+            logfatal("gba_read_byte REGION_OAM 0x%08lX", address);
+        case REGION_GAMEPAK0_L:
+        case REGION_GAMEPAK0_H:
+        case REGION_GAMEPAK1_L:
+        case REGION_GAMEPAK1_H:
+        case REGION_GAMEPAK2_L:
+        case REGION_GAMEPAK2_H: {
+            word index = address & 0x1FFFFFF;
+            if (index < mem.rom_size) {
+                dfs_seek(mem.rom, index, 0);
+                byte value;
+                dfs_read(&value, 1, 1, mem.rom);
+                return value;
+            } else {
+                logfatal("open bus");
+            }
+        }
+            logfatal("gba_read_byte REGION_GAMEPAK2_H 0x%08lX", address);
+        case REGION_SRAM:
+            logfatal("gba_read_byte REGION_SRAM 0x%08lX", address);
+        case REGION_SRAM_MIRR:
+            logfatal("gba_read_byte REGION_SRAM_MIRR 0x%08lX", address);
+    }
     return 0;
 }
 
@@ -382,11 +463,35 @@ half gba_read_half(word address, access_type_t access_type) {
     switch (region) {
         case REGION_BIOS:
             logfatal("gba_read_half REGION_BIOS 0x%08lX", address);
-        case REGION_EWRAM:
-            logfatal("gba_read_half REGION_EWRAM 0x%08lX", address);
-        case REGION_IWRAM:
-            logfatal("gba_read_half REGION_IWRAM 0x%08lX", address);
-        case REGION_IOREG:
+        case REGION_EWRAM: {
+            word index = (address - 0x02000000) % 0x40000;
+            return half_from_byte_array(mem.ewram, index);
+        }
+        case REGION_IWRAM: {
+            word index = (address - 0x03000000) % 0x8000;
+            return half_from_byte_array(mem.iwram, index);
+        }
+        case REGION_IOREG: {
+            if (address < 0x04000400) {
+                byte size = get_ioreg_size_for_addr(address);
+                switch (size) {
+                    case 0:
+                        logfatal("Returning open bus (UNUSED HALF IOREG 0x%08lX)", address)
+                    case sizeof(byte):
+                        return read_byte_ioreg(address) | (read_byte_ioreg(address + 1) << 8);
+                    case sizeof(half):
+                        return read_half_ioreg(address);
+                    case sizeof(word): {
+                        byte ofs = address % 4;
+                        return (read_word_ioreg(address) >> (ofs * 8)) & 0xFFFF;
+                        default:
+                            logfatal("Unrecognized size in read_half_ioreg!")
+                    }
+                }
+            } else {
+                logfatal("Open bus")
+            }
+        }
             logfatal("gba_read_half REGION_IOREG 0x%08lX", address);
         case REGION_PRAM:
             logfatal("gba_read_half REGION_PRAM 0x%08lX", address);
@@ -410,11 +515,11 @@ half gba_read_half(word address, access_type_t access_type) {
                 logfatal("open bus");
             }
         }
-            logfatal("gba_read_word REGION_GAMEPAK2_H 0x%08lX", address);
+            logfatal("gba_read_half REGION_GAMEPAK2_H 0x%08lX", address);
         case REGION_SRAM:
-            logfatal("gba_read_word REGION_SRAM 0x%08lX", address);
+            logfatal("gba_read_half REGION_SRAM 0x%08lX", address);
         case REGION_SRAM_MIRR:
-            logfatal("gba_read_word REGION_SRAM_MIRR 0x%08lX", address);
+            logfatal("gba_read_half REGION_SRAM_MIRR 0x%08lX", address);
     }
     return 0;
 }
@@ -466,14 +571,118 @@ word gba_read_word(word address, access_type_t access_type) {
     return 0;
 }
 
+INLINE bool is_bitmap() {
+    int mode = ppu.DISPCNT.mode;
+    return mode >= 3 && mode < 6;
+}
+
+INLINE bool is_bg(word address) {
+    if (is_bitmap()) {
+        return address >= 0x6000000 && address <= 0x6013FFF;
+    } else {
+        return address >= 0x6000000 && address <= 0x600FFFF;
+    }
+}
+
 void gba_write_byte(word address, byte value, access_type_t access_type) {
-    logfatal("gba_write_byte 0x%08lX", address);
+    half region = address >> 24;
+    switch (region) {
+        case REGION_BIOS:
+            logfatal("gba_write_byte REGION_BIOS 0x%08lX", address);
+        case REGION_EWRAM: {
+            word index = (address - 0x02000000) % 0x40000;
+            mem.ewram[index] = value;
+            break;
+        }
+        case REGION_IWRAM: {
+            word index = (address - 0x03000000) % 0x8000;
+            mem.iwram[index] = value;
+            break;
+        }
+        case REGION_IOREG:
+            logfatal("gba_write_byte REGION_IOREG 0x%08lX", address);
+            break;
+        case REGION_PRAM: {
+            word index = (address - 0x5000000) % 0x400;
+            word lower_index = index & 0xFFFFFFFE;
+            word upper_index = lower_index + 1;
+            ppu.pram[lower_index] = value;
+            ppu.pram[upper_index] = value;
+            break;
+        }
+        case REGION_VRAM: {
+            word index = address - 0x06000000;
+            index %= VRAM_SIZE;
+            // Special case for single byte writes to VRAM, OBJ writes are ignored.
+            if (is_bg(address)) {
+                word lower_index = index & 0xFFFFFFFE;
+                word upper_index = lower_index + 1;
+                ppu.vram[lower_index] = value;
+                ppu.vram[upper_index] = value;
+            }
+            break;
+        }
+        case REGION_OAM:
+            logfatal("gba_write_byte REGION_OAM 0x%08lX", address);
+        case REGION_GAMEPAK0_L:
+        case REGION_GAMEPAK0_H:
+        case REGION_GAMEPAK1_L:
+        case REGION_GAMEPAK1_H:
+        case REGION_GAMEPAK2_L:
+        case REGION_GAMEPAK2_H:
+            logfatal("gba_write_byte GAMEPAK 0x%08lX", address);
+        case REGION_SRAM:
+            logfatal("gba_write_byte REGION_SRAM 0x%08lX", address);
+        case REGION_SRAM_MIRR:
+            logfatal("gba_write_byte REGION_SRAM_MIRR 0x%08lX", address);
+    }
 
 }
 
 void gba_write_half(word address, half value, access_type_t access_type) {
-    logfatal("gba_write_half 0x%08lX", address);
-
+    address &= ~(sizeof(half) - 1);
+    half region = address >> 24;
+    switch (region) {
+        case REGION_BIOS:
+            logfatal("gba_write_half REGION_BIOS 0x%08lX", address);
+        case REGION_EWRAM: {
+            word index = (address - 0x02000000) % 0x40000;
+            half_to_byte_array(mem.ewram, index, value);
+            break;
+        }
+        case REGION_IWRAM: {
+            word index = (address - 0x03000000) % 0x8000;
+            half_to_byte_array(mem.iwram, index, value);
+            break;
+        }
+        case REGION_IOREG:
+            logfatal("gba_write_half REGION_IOREG 0x%08lX", address);
+            break;
+        case REGION_PRAM: {
+            word index = (address - 0x5000000) % 0x400;
+            half_to_byte_array(ppu.pram, index, value);
+            break;
+        }
+        case REGION_VRAM: {
+            word index = address - 0x06000000;
+            index %= VRAM_SIZE;
+            half_to_byte_array(ppu.vram, index, value);
+            break;
+        }
+        case REGION_OAM:
+            logfatal("gba_write_half REGION_OAM 0x%08lX", address);
+        case REGION_GAMEPAK0_L:
+        case REGION_GAMEPAK0_H:
+        case REGION_GAMEPAK1_L:
+        case REGION_GAMEPAK1_H:
+        case REGION_GAMEPAK2_L:
+        case REGION_GAMEPAK2_H:
+            logfatal("gba_write_half GAMEPAK 0x%08lX", address);
+        case REGION_SRAM:
+            logfatal("gba_write_half REGION_SRAM 0x%08lX", address);
+        case REGION_SRAM_MIRR:
+            logfatal("gba_write_half REGION_SRAM_MIRR 0x%08lX", address);
+    }
 }
 
 void gba_write_word(word address, word value, access_type_t access_type) {
@@ -515,8 +724,12 @@ void gba_write_word(word address, word value, access_type_t access_type) {
             break;
         case REGION_PRAM:
             logfatal("gba_write_word REGION_PRAM 0x%08lX", address);
-        case REGION_VRAM:
-            logfatal("gba_write_word REGION_VRAM 0x%08lX", address);
+        case REGION_VRAM: {
+            word index = address - 0x06000000;
+            index %= VRAM_SIZE;
+            word_to_byte_array(ppu.vram, index, value);
+            break;
+        }
         case REGION_OAM:
             logfatal("gba_write_word REGION_OAM 0x%08lX", address);
         case REGION_GAMEPAK0_L:

@@ -5,14 +5,23 @@
 
 typedef union immediate_as_offset_flags {
     struct {
+#ifdef GBA_LITTLE_ENDIAN
         unsigned rm:4;
         bool reg_op:1; // Must be 0?
         unsigned shift_type:2;
         unsigned shift_amount:5;
         unsigned:4;
-    };
+#else
+        unsigned:4;
+        unsigned shift_amount:5;
+        unsigned shift_type:2;
+        bool reg_op:1; // Must be 0?
+        unsigned rm:4;
+#endif
+    } PACKED;
     half raw;
 } immediate_as_offset_flags_t;
+ASSERTHALF(immediate_as_offset_flags_t);
 
 // http://problemkaputt.de/gbatek.htm#armopcodesmemorysingledatatransferldrstrpld
 void single_data_transfer(arm7tdmi_t* state, arminstr_t* arminstr) {

@@ -2,13 +2,23 @@
 
 typedef union field_masks {
     struct {
+#ifdef GBA_LITTLE_ENDIAN
         bool c:1; // Write to control field
         bool x:1; // Write to extension field
         bool s:1; // Write to status field
         bool f:1; // Write to flags field
+        byte:4;
+#else
+        byte:4;
+        bool f:1; // Write to flags field
+        bool s:1; // Write to status field
+        bool x:1; // Write to extension field
+        bool c:1; // Write to control field
+#endif
     };
-    unsigned raw:4;
+    byte raw;
 } field_masks_t;
+ASSERTBYTE(field_masks_t);
 
 word get_mask(field_masks_t* masks) {
     word mask = 0;
@@ -21,11 +31,19 @@ word get_mask(field_masks_t* masks) {
 
 typedef union msr_immediate_flags {
     struct {
+#ifdef GBA_LITTLE_ENDIAN
         unsigned imm:8;
         unsigned shift:4;
-    } parsed;
-    unsigned raw:12;
+        unsigned:4;
+#else
+        unsigned:4;
+        unsigned shift:4;
+        unsigned imm:8;
+#endif
+    } PACKED parsed;
+    half raw;
 } msr_immediate_flags_t;
+ASSERTHALF(msr_immediate_flags_t);
 
 // http://problemkaputt.de/gbatek.htm#armopcodespsrtransfermrsmsr
 void psr_transfer(arm7tdmi_t* state, arminstr_t* arminstr) {
@@ -36,12 +54,21 @@ void psr_transfer(arm7tdmi_t* state, arminstr_t* arminstr) {
     unsigned int dt_operand2 = arminstr->parsed.DATA_PROCESSING.operand2;
     union {
         struct {
+#ifdef GBA_LITTLE_ENDIAN
             bool msr:1; // if 0, mrs, if 1, msr
             bool spsr:1; // if 0, cpsr, if 1, spsr_current mode
-            unsigned:2;
+            unsigned:6;
+#else
+            unsigned:6;
+            bool spsr:1; // if 0, cpsr, if 1, spsr_current mode
+            bool msr:1; // if 0, mrs, if 1, msr
+#endif
         };
-        unsigned raw:4;
+        byte raw;
     } opcode;
+
+    ASSERTBYTE(opcode);
+
     opcode.raw = dt_opcode;
 
     if (opcode.msr) {

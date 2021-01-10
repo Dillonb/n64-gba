@@ -4,21 +4,44 @@
 
 typedef union nonimmediate_flags {
     struct {
+#ifdef GBA_LITTLE_ENDIAN
         unsigned:7; // common flags
         unsigned shift_amount:5;
-    } shift_immediate;
+        unsigned:4;
+#else
+        unsigned:4;
+        unsigned shift_amount:5;
+        unsigned:7; // common flags
+#endif
+    } PACKED shift_immediate;
     struct {
+#ifdef GBA_LITTLE_ENDIAN
         unsigned:8; // common flags
         unsigned rs:4;
-    } shift_register;
+        unsigned:4;
+#else
+        unsigned:4;
+        unsigned rs:4;
+        unsigned:8; // common flags
+#endif
+    } PACKED shift_register;
     // Common to both
     struct {
+#ifdef GBA_LITTLE_ENDIAN
         unsigned rm:4;
         bool r:1; // 1: shift by register, 0, shift by immediate.
         shift_type_t shift_type:2;
-    };
-    unsigned raw:12;
+        unsigned:9;
+#else
+        unsigned:9;
+        shift_type_t shift_type:2;
+        bool r:1; // 1: shift by register, 0, shift by immediate.
+        unsigned rm:4;
+#endif
+    } PACKED;
+    half raw;
 } nonimmediate_flags_t;
+ASSERTHALF(nonimmediate_flags_t);
 
 // http://problemkaputt.de/gbatek.htm#armopcodesdataprocessingalu
 void data_processing(arm7tdmi_t* state, arminstr_t* arminstr) {
