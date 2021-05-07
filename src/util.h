@@ -22,6 +22,10 @@ typedef int64_t i64;
 #define INLINE static inline __attribute__((always_inline))
 #define PACKED __attribute__((__packed__))
 
+#define WORD_ADDRESS(addr) (addr)
+#define HALF_ADDRESS(addr) ((addr) ^ 2)
+#define BYTE_ADDRESS(addr) ((addr) ^ 3)
+
 INLINE int popcnt_16(u16 value) {
     int count = 0;
     for (int i = 0; i < 16; i++) {
@@ -44,38 +48,24 @@ INLINE int popcnt_8(u8 value) {
     return count;
 }
 
-INLINE u32 bswap32(u32 value) {
-    return (value & 0x000000FF) << 24
-         | (value & 0x0000FF00) << 8
-         | (value & 0x00FF0000) >> 8
-         | (value & 0xFF000000) >> 24;
-}
-
-INLINE u32 bswap16(u16 value) {
-    return (value & 0x00FF) << 8
-           | (value & 0xFF00) >> 8;
-}
-
 INLINE void word_to_byte_array(byte* arr, word index, word value) {
-    word w = bswap32(value);
-    memcpy(arr + index, &w, sizeof(word));
+    memcpy(arr + index, &value, sizeof(word));
 }
 
 INLINE void half_to_byte_array(byte* arr, word index, half value) {
-    half h = bswap16(value);
-    memcpy(arr + index, &h, sizeof(half));
+    memcpy(arr + index, &value, sizeof(half));
 }
 
 INLINE word word_from_byte_array(byte* arr, word index) {
     word val;
     memcpy(&val, arr + index, sizeof(word));
-    return bswap32(val);
+    return val;
 }
 
 INLINE half half_from_byte_array(byte* arr, word index) {
     half val;
     memcpy(&val, arr + index, sizeof(half));
-    return bswap16(val);
+    return val;
 }
 
 #define ASSERTWORD(thing) _Static_assert(sizeof(thing) == 4);

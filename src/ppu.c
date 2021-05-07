@@ -71,17 +71,17 @@ void render_line_mode4() {
             buf++;
         }
     }
-    half transparent = gba_to_n64_color(half_from_byte_array(ppu.pram, 0));
+    half transparent = gba_to_n64_color(half_from_byte_array(ppu.pram, HALF_ADDRESS(0)));
 
     if (ppu.DISPCNT.screen_display_bg2) {
         for (int x = 0; x < GBA_SCREEN_X; x++) {
             int offset = x + (ppu.y * GBA_SCREEN_X);
             int index = ppu.DISPCNT.display_frame_select * 0xA000 + offset;
-            int tile = ppu.vram[index];
+            int tile = ppu.vram[BYTE_ADDRESS(index)];
             if (tile == 0) {
                 buf[ppu.y * 320 + x] = transparent;
             } else {
-                buf[ppu.y * 320 + x] = gba_to_n64_color(half_from_byte_array(ppu.pram, (0x20 * PALETTE_BANK_BACKGROUND + 2 * tile)) & 0x7FFF);
+                buf[ppu.y * 320 + x] = gba_to_n64_color(half_from_byte_array(ppu.pram, HALF_ADDRESS(0x20 * PALETTE_BANK_BACKGROUND + 2 * tile)) & 0x7FFF);
             }
         }
     } else {

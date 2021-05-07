@@ -9,7 +9,7 @@
 
 
 typedef struct gbamem {
-    int rom; // file handle
+    u8* rom;
     int rom_size;
     u8 ewram[EWRAM_SIZE];
     u8 iwram[IWRAM_SIZE];

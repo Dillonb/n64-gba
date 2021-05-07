@@ -30,13 +30,6 @@ int main(void) {
     console_init();
     console_set_render_mode(RENDER_MANUAL);
 
-    if(dfs_init( DFS_DEFAULT_LOCATION ) != DFS_ESUCCESS)
-    {
-        printf("Filesystem failed to start!\n");
-        console_render();
-        return 1;
-    }
-
     const char* rom = rom_menu();
     printf("Loading %s\n", rom);
     console_render();

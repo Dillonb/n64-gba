@@ -64,8 +64,8 @@ void gba_init(const char* rom) {
     memset(&bus, 0, sizeof(bus));
     memset(&ppu, 0, sizeof(ppu));
 
-    mem.rom = dfs_open(rom);
-    mem.rom_size = dfs_size(mem.rom);
+    mem.rom = (u8*)DFS_DEFAULT_LOCATION;
+    mem.rom_size = 16936; // armwrestler.gba
 
     bus.KEYINPUT.raw = 0x03FF;
 
