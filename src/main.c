@@ -43,6 +43,9 @@ int main(void) {
 
     gba_init(rom);
     console_close();
+
+    // re-init display so we're sure the resolution is set correctly
+    display_init( res, bit, 2, GAMMA_NONE, ANTIALIAS_RESAMPLE );
     gba_system_loop();
 
     return 0;
