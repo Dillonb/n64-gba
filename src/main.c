@@ -34,11 +34,11 @@ int main(void) {
     printf("Loading %s\n", rom);
     console_render();
 
-    gba_init(rom);
     console_close();
 
     // re-init display so we're sure the resolution is set correctly
     display_init( res, bit, 2, GAMMA_NONE, ANTIALIAS_RESAMPLE );
+    gba_init(rom);
     gba_system_loop();
 
     return 0;

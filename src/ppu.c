@@ -154,7 +154,7 @@ void ppu_end_hblank() {
     ppu.DISPSTAT.hblank = false;
     ppu.y++;
 
-    check_vcount(ppu);
+    check_vcount();
 }
 
 void ppu_end_vblank() {
@@ -166,7 +166,7 @@ void ppu_end_vblank() {
      */
 
     ppu.y = 0;
-    check_vcount(ppu);
+    check_vcount();
     ppu.DISPSTAT.vblank = false;
 
     display_show(ppu.display);
