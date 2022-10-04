@@ -201,5 +201,6 @@ extern gbabus_t bus;
 extern arm7tdmi_t* cpu;
 
 void gba_system_loop();
+void gba_load_rom_page(word addr);
 void gba_init(const char* rom);
 #endif //N64_GBA_GBA_H
