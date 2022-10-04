@@ -654,7 +654,22 @@ void gba_write_half(word address, half value, access_type_t access_type) {
             break;
         }
         case REGION_IOREG:
-            logfatal("gba_write_half REGION_IOREG 0x%08lX", address);
+            if (address < 0x04000400) {
+                byte ioreg_size = get_ioreg_size_for_addr(address);
+                if (ioreg_size == sizeof(word)) {
+                    word offset = (address % sizeof(word));
+                    word shifted_value = value;
+                    shifted_value <<= (offset * 8);
+                    write_word_ioreg_masked(address - offset, shifted_value, 0xFFFF << (offset * 8));
+                } else if (ioreg_size == sizeof(half)) {
+                    write_half_ioreg(address, value);
+                    return;
+                } else if (ioreg_size == 0) {
+                    // Unused io register
+                    //logwarn("Unused half size ioregister 0x%08X", address)
+                    return;
+                }
+            }
             break;
         case REGION_PRAM: {
             word index = (address - 0x5000000) % 0x400;

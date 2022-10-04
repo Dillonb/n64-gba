@@ -64,13 +64,23 @@ INLINE half* get_buffer_ptr(display_context_t context) {
     return (half*)__safe_buffer[context - 1];
 }
 
-void render_line_mode4() {
+void render_line_mode3() {
     half* buf = get_buffer_ptr(ppu.display);
-    if (buf == NULL) {
-        while(true) {
-            buf++;
+    half transparent = gba_to_n64_color(half_from_byte_array(ppu.pram, HALF_ADDRESS(0)));
+    if (ppu.DISPCNT.screen_display_bg2) {
+        for (int x = 0; x < GBA_SCREEN_X; x++) {
+            int offset = (x + (ppu.y * GBA_SCREEN_X)) << 1;
+            buf[ppu.y * 320 + x] = gba_to_n64_color(half_from_byte_array(ppu.vram, HALF_ADDRESS(offset)) & 0x7FFF);
+        }
+    } else {
+        for (int x = 0; x < GBA_SCREEN_X; x++) {
+            buf[ppu.y * 320 + x] = transparent;
         }
     }
+}
+
+void render_line_mode4() {
+    half* buf = get_buffer_ptr(ppu.display);
     half transparent = gba_to_n64_color(half_from_byte_array(ppu.pram, HALF_ADDRESS(0)));
 
     if (ppu.DISPCNT.screen_display_bg2) {
@@ -95,8 +105,12 @@ void render_line() {
     switch (ppu.DISPCNT.mode) {
         case 0: // probably still booting
             break;
+        case 3:
+            render_line_mode3();
+            break;
         case 4:
             render_line_mode4();
+            break;
         default:
             break;
             // shrug
